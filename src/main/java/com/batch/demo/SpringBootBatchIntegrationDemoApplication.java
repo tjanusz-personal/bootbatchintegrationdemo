@@ -18,8 +18,10 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.ConfigurableApplicationContext;
 
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
 
 @SpringBootApplication
 public class SpringBootBatchIntegrationDemoApplication implements ApplicationRunner, ApplicationContextAware {
@@ -59,8 +61,24 @@ public class SpringBootBatchIntegrationDemoApplication implements ApplicationRun
 		// setup some dummy job arguments
 		String clientName = "my_demo_client";
 		String inFileName = "test_mappings.csv";
-		String outFileName = "test_mappings_3_out.csv";
+		String outFileName = "test_mappings_out.csv";
 		Date asOfDate = new Date();
+
+        // If have arguments passed then map them to the job values.
+        // We can probably map these automatically to JobParameters but I wanted to see if/how we can intercept these calls.
+        List<String> nonOptionArgs = args.getNonOptionArgs();
+        if (nonOptionArgs.size() >= 1) {
+            clientName = nonOptionArgs.get(0);
+            inFileName = nonOptionArgs.get(1);
+            outFileName = nonOptionArgs.get(2);
+        }
+
+        // make AsOfDate optional and be in milliseconds for now
+        if (nonOptionArgs.size() >= 4) {
+            String instantAsString = nonOptionArgs.get(3);
+            Instant instant = Instant.ofEpochMilli(Long.valueOf(instantAsString));
+            asOfDate = Date.from(instant);
+        }
 
 		// get application context so can configure job and run it
 		ConfigurableApplicationContext ctx = (ConfigurableApplicationContext) this.applicationContext;

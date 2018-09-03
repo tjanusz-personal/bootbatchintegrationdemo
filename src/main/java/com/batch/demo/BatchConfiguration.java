@@ -11,6 +11,7 @@ import com.batch.demo.readers.DemoInputFieldSetMapper;
 import com.batch.demo.readers.DemoItemReadListener;
 import com.batch.demo.writers.DemoConsoleItemWriter;
 import com.batch.demo.writers.DemoItemExtractor;
+import com.batch.demo.writers.StringHeaderWriter;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobExecutionListener;
 import org.springframework.batch.core.Step;
@@ -26,6 +27,7 @@ import org.springframework.batch.core.repository.support.MapJobRepositoryFactory
 import org.springframework.batch.core.step.skip.SkipPolicy;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.file.FlatFileItemReader;
+import org.springframework.batch.item.file.FlatFileItemWriter;
 import org.springframework.batch.item.file.mapping.DefaultLineMapper;
 import org.springframework.batch.item.file.transform.DelimitedLineAggregator;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
@@ -144,7 +146,8 @@ public class BatchConfiguration {
                 .listener(new DemoChunkListener())
                 .listener(new DemoItemReadListener())
                 .processor(itemProcessor())
-                .writer(demoConsoleWriter())
+                .writer(demoCSVFileWriter(WILL_BE_INJECTED))
+//                .writer(demoConsoleWriter())
                 .taskExecutor(taskExecutor())
                 .build();
     }
@@ -247,5 +250,23 @@ public class BatchConfiguration {
     RetryListener jobRetryListener() {
         return new DemoRetryListener();
     }
+
+    /**
+     * Basic CSV writer to create the output CSV file we need to return to the user.
+     */
+    @Bean
+    @StepScope
+    FlatFileItemWriter<DemoInputRow> demoCSVFileWriter(@Value("#{jobParameters[outputFileName]}") String outputFileName) {
+        FlatFileItemWriter<DemoInputRow> csvFileWriter = new FlatFileItemWriter<>();
+        String exportFileHeader = "RecordId,Guid,Phones,Emails,Devices,Asof";
+        StringHeaderWriter headerWriter = new StringHeaderWriter(exportFileHeader);
+        csvFileWriter.setHeaderCallback(headerWriter);
+        csvFileWriter.setResource(new FileSystemResource(outputFileName)); // write to local file system
+        // define how to make a line from an object
+        LineAggregator<DemoInputRow> lineAggregator = demoLineAggregator();
+        csvFileWriter.setLineAggregator(lineAggregator);
+        return csvFileWriter;
+    }
+
 }
 

@@ -7,6 +7,7 @@ buildscript {
 	}
 	dependencies {
 		classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+		classpath('se.transmode.gradle:gradle-docker:1.2')
 	}
 }
 
@@ -14,21 +15,38 @@ apply plugin: 'java'
 apply plugin: 'eclipse'
 apply plugin: 'org.springframework.boot'
 apply plugin: 'io.spring.dependency-management'
+apply plugin: 'docker'
 
 group = 'com.batch'
-version = '0.0.1-SNAPSHOT'
+//version = '0.0.1-SNAPSHOT'
 sourceCompatibility = 1.8
+
+jar {
+	baseName = 'bootbatchintegrationdemo'
+//	version =  '0.1.0'
+}
 
 repositories {
 	mavenCentral()
 }
 
-
 dependencies {
 	// need to include this for data source connection defaults
 	compile("org.hsqldb:hsqldb")
 	compile('org.springframework.boot:spring-boot-starter-batch')
-//	compileOnly('org.springframework.boot:spring-boot-configuration-processor')
 	testCompile('org.springframework.boot:spring-boot-starter-test')
 	testCompile('org.springframework.batch:spring-batch-test')
 }
+
+task buildDocker(type: Docker, dependsOn: [build]) {
+	push = false
+	applicationName = jar.baseName
+	dockerfile = file('src/main/docker/Dockerfile')
+	doFirst {
+		copy {
+			from jar
+			into stageDir
+		}
+	}
+}
+
